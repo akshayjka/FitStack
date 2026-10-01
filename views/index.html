@@ -80,6 +80,7 @@
             </div>
         </section>
     
+
 <section class="section container" id="products">
   <div class="section-head reveal">
     <div>
@@ -92,26 +93,27 @@
     </p>
   </div>
 
-  <!-- Fitness CRM product card: no embedded simulator -->
-  <div class="product-grid">
+  <!-- All products share this grid -->
+  <div id="productsGrid" class="product-grid">
+
+    <!-- Static interactive demo card -->
     <article class="product-card simulator-product reveal">
-      <div class="product-image simulator-preview">
+      <div class="product-media simulator-preview">
         <img
           src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=900&q=80"
-          alt="Fitness CRM software demo"
+          alt="Fitness CRM Workflow Simulator"
           loading="lazy"
         />
-        <span class="product-badge">INTERACTIVE DEMO</span>
+        <span class="product-tag">INTERACTIVE DEMO</span>
       </div>
 
-      <div class="product-content">
+      <div class="product-body simulator-body">
         <span class="eyebrow">FITNESS MANAGEMENT</span>
         <h3>Fitness CRM Workflow Simulator</h3>
         <p>
-          Explore a fitness business workflow, from member
-          management and attendance to classes and payments.
+          Explore member management, attendance, classes
+          and payments in an interactive demo.
         </p>
-
         <a
           class="button"
           href="/prod-vid/fitness_crm_workflow_simulator.html"
@@ -122,13 +124,13 @@
         </a>
       </div>
     </article>
-  </div>
 
-  <!-- Keep this element for products loaded from MongoDB -->
-  <div id="productsGrid" class="product-grid">
+    <!-- Products fetched dynamically from MongoDB -->
     <div class="loading-card">Loading products…</div>
+
   </div>
 </section>
+
 
 
         <section class="section container" id="industries-showcase">
