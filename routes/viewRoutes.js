@@ -1,0 +1,10 @@
+const express = require('express');
+const path = require('path');
+const { requireAuthPage } = require('../middleware/authMiddleware');
+const router = express.Router();
+const view = name => (_, res) => res.sendFile(path.join(__dirname, '..', 'views', name));
+router.get('/', view('index.html'));
+router.get('/blog', view('blog.html'));
+router.get('/admin/login', view('admin-login.html'));
+router.get('/admin', requireAuthPage, view('admin-dashboard.html'));
+module.exports = router;

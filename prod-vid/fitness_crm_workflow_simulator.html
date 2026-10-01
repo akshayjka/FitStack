@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Studio CRM Automation Workflow</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Flowchart Connector SVG styling */
+        .path-line {
+            stroke-dasharray: 8;
+            animation: dash 30s linear infinite;
+        }
+        .path-active {
+            stroke: #10B981 !important;
+            stroke-width: 3.5px !important;
+            filter: drop-shadow(0px 0px 6px rgba(16, 185, 129, 0.6));
+        }
+        .path-inactive {
+            stroke: #9CA3AF;
+            stroke-width: 2px;
+            opacity: 0.4;
+        }
+        .path-rejected {
+            stroke: #EF4444 !important;
+            stroke-width: 2.5px;
+            opacity: 0.6;
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: -1000; }
+        }
+
+        /* Node pulse animation on simulation */
+        .node-pulse {
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+            70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+            100% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col overflow-x-hidden">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-900/90 border-b border-slate-800 backdrop-blur sticky top-0 z-30 px-4 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/20">
+                <i class="fa-solid fa-diagram-project"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
+                    Fitness & Studio CRM Workflow Engine
+                </h1>
+                <p class="text-xs text-slate-400">Automated Lead Conversion & Branching Pipeline for Gyms, Swimming & Dance</p>
+            </div>
+        </div>
+
+        <!-- Controls Header Button Group -->
+        <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <button id="btnSimulateLead" onclick="runSimulation()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs sm:text-sm flex items-center gap-2 transition shadow-lg shadow-emerald-900/30">
+                <i class="fa-solid fa-play text-xs"></i> Simulate Lead Test
+            </button>
+            <button id="btnResetWorkflow" onclick="resetWorkflowState()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs sm:text-sm flex items-center gap-2 border border-slate-700 transition">
+                <i class="fa-solid fa-rotate-right text-xs"></i> Reset Logic
+            </button>
+            <button id="btnEmbedCode" onclick="openEmbedModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs sm:text-sm flex items-center gap-2 transition shadow-lg shadow-indigo-900/30">
+                <i class="fa-solid fa-code text-xs"></i> Get Embed Code
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+
+        <!-- Sidebar / Settings & Stats Controls -->
+        <aside class="w-full lg:w-80 bg-slate-900/70 border-r border-slate-800/80 p-4 flex flex-col gap-5 overflow-y-auto shrink-0">
+            <!-- Studio Branch Filter Selector -->
+            <div class="bg-slate-800/60 p-3.5 rounded-xl border border-slate-700/60">
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Focus Category Preview</label>
+                <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-900 rounded-lg border border-slate-800">
+                    <button onclick="setCategoryFilter('all')" id="filter-all" class="cat-filter-btn px-2 py-1.5 rounded-md text-xs font-semibold text-white bg-indigo-600 transition">All</button>
+                    <button onclick="setCategoryFilter('gym')" id="filter-gym" class="cat-filter-btn px-2 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-white transition">Gym</button>
+                    <button onclick="setCategoryFilter('swim')" id="filter-swim" class="cat-filter-btn px-2 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-white transition">Swim</button>
+                    <button onclick="setCategoryFilter('dance')" id="filter-dance" class="cat-filter-btn px-2 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-white transition col-span-3 mt-1">Dance Studio</button>
+                </div>
+            </div>
+
+            <!-- Workflow Configuration Switches -->
+            <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700/60 space-y-4">
+                <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                    <span>Automation Rules</span>
+                    <i class="fa-solid fa-sliders text-indigo-400"></i>
+                </h3>
+
+                <!-- Switch 1: Auto WhatsApp -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-200">Instant WhatsApp Instant Lead</p>
+                        <p class="text-[10px] text-slate-400">Send welcome brochure within 2 mins</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="cfg-whatsapp" checked class="sr-only peer" onchange="updateWorkflowConfig()">
+                        <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                    </label>
+                </div>
+
+                <!-- Switch 2: Trial Reminder -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-200">24h Trial Session Reminder</p>
+                        <p class="text-[10px] text-slate-400">SMS & Push alert prior to booking</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="cfg-reminder" checked class="sr-only peer" onchange="updateWorkflowConfig()">
+                        <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                    </label>
+                </div>
+
+                <!-- Switch 3: Non-Attended Nudge Offer -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-200">No-Show Re-engagement</p>
+                        <p class="text-[10px] text-slate-400">Offer 2nd chance trial pass automatically</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="cfg-noshow" checked class="sr-only peer" onchange="updateWorkflowConfig()">
+                        <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                    </label>
+                </div>
+
+                <!-- Select Box: Discount Incentive -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Membership Discount Incentive</label>
+                    <select id="cfg-discount" class="w-full bg-slate-900 border border-slate-700 text-xs rounded-lg p-2 text-slate-200 focus:ring-1 focus:ring-indigo-500" onchange="updateWorkflowConfig()">
+                        <option value="10">10% Off First Month</option>
+                        <option value="20" selected>20% Off Fast-Decision Deal</option>
+                        <option value="waive">Waive Registration Fee ($50 Value)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Decision Point Controls (If / Else Simulators) -->
+            <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700/60 space-y-3">
+                <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                    <span>Interactive Logic Switches</span>
+                    <i class="fa-solid fa-code-branch text-purple-400"></i>
+                </h3>
+                <p class="text-[11px] text-slate-400 leading-tight">Click or switch below to test IF/ELSE branching conditions across the CRM flow:</p>
+
+                <!-- Decision 1 -->
+                <div class="p-2.5 bg-slate-900/80 rounded-lg border border-slate-700/80">
+                    <span class="text-xs font-medium text-slate-300 block mb-1">IF: Attended Trial Class?</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="setDecision('attended', true)" id="btn-att-yes" class="px-2 py-1 rounded text-xs font-semibold bg-emerald-600 text-white transition">YES (Attended)</button>
+                        <button onclick="setDecision('attended', false)" id="btn-att-no" class="px-2 py-1 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition">NO (No-Show)</button>
+                    </div>
+                </div>
+
+                <!-- Decision 2 -->
+                <div class="p-2.5 bg-slate-900/80 rounded-lg border border-slate-700/80">
+                    <span class="text-xs font-medium text-slate-300 block mb-1">IF: Converted to Paid Member?</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="setDecision('bought', true)" id="btn-buy-yes" class="px-2 py-1 rounded text-xs font-semibold bg-emerald-600 text-white transition">YES (Purchased)</button>
+                        <button onclick="setDecision('bought', false)" id="btn-buy-no" class="px-2 py-1 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition">NO (Declined)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulated Execution Log -->
+            <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 flex-1 min-h-[160px] flex flex-col">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                    <span class="text-xs font-semibold text-slate-300 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Realtime CRM Log
+                    </span>
+                    <button onclick="clearLog()" class="text-[10px] text-slate-500 hover:text-slate-300">Clear</button>
+                </div>
+                <div id="crm-log" class="text-[11px] font-mono text-slate-400 space-y-1.5 overflow-y-auto max-h-[180px] pr-1">
+                    <div class="text-slate-500 italic">[System ready] Click "Simulate Lead Test" to test the pipeline...</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Interactive Canvas View -->
+        <main class="flex-1 bg-slate-950 p-4 lg:p-8 overflow-x-auto overflow-y-auto relative flex flex-col justify-between">
+
+            <!-- Flowchart Container -->
+            <div class="min-w-[950px] relative py-6 px-4 mx-auto flex flex-col items-center gap-12">
+
+                <!-- SVG Connection Canvas overlay -->
+                <svg id="svg-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-0">
+                    <!-- Lines are dynamically generated or styled via JS -->
+                </svg>
+
+                <!-- SECTION 1: Lead Capture Node -->
+                <div class="relative z-10 flex flex-col items-center">
+                    <div id="node-capture" onclick="selectNode('capture')" class="workflow-node group bg-slate-900 border-2 border-indigo-500/80 hover:border-indigo-400 p-4 rounded-2xl w-80 shadow-xl cursor-pointer transition transform hover:-translate-y-1">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">STAGE 1: CAPTURE</span>
+                            <i class="fa-solid fa-circle-info text-slate-500 group-hover:text-indigo-400 transition"></i>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500 flex items-center justify-center text-indigo-300 text-lg">
+                                <i class="fa-solid fa-bullhorn"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-sm text-slate-100">Multi-Channel Lead Inflow</h4>
+                                <p class="text-xs text-slate-400">Website Form, Instagram Ads, Walk-In QR</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: Branching Routing based on Studio Category -->
+                <div class="relative z-10 w-full max-w-5xl">
+                    <div class="text-center mb-4">
+                        <span class="bg-slate-900 border border-slate-800 text-slate-400 text-xs px-3 py-1 rounded-full font-medium">
+                            <i class="fa-solid fa-code-fork text-purple-400 mr-1.5"></i> Category Routing Engine
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-6">
+                        <!-- Gym Branch Node -->
+                        <div id="node-branch-gym" onclick="selectNode('gym')" class="workflow-node studio-branch cat-gym bg-slate-900 border border-slate-800 hover:border-amber-500/60 p-4 rounded-2xl shadow-lg cursor-pointer transition transform hover:-translate-y-1">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">GYM & FITNESS</span>
+                                <i class="fa-solid fa-dumbbell text-amber-400"></i>
+                            </div>
+                            <h4 class="font-bold text-sm text-slate-100 mb-1">Gym Trial Booking</h4>
+                            <p class="text-xs text-slate-400">Free 1-Day Pass + Personal Trainer Intro</p>
+                        </div>
+
+                        <!-- Swimming Branch Node -->
+                        <div id="node-branch-swim" onclick="selectNode('swim')" class="workflow-node studio-branch cat-swim bg-slate-900 border border-slate-800 hover:border-cyan-500/60 p-4 rounded-2xl shadow-lg cursor-pointer transition transform hover:-translate-y-1">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">SWIMMING ACADEMY</span>
+                                <i class="fa-solid fa-person-swimming text-cyan-400"></i>
+                            </div>
+                            <h4 class="font-bold text-sm text-slate-100 mb-1">Pool Assessment Call</h4>
+                            <p class="text-xs text-slate-400">Slot booking & Swim level evaluation</p>
+                        </div>
+
+                        <!-- Dance Branch Node -->
+                        <div id="node-branch-dance" onclick="selectNode('dance')" class="workflow-node studio-branch cat-dance bg-slate-900 border border-slate-800 hover:border-pink-500/60 p-4 rounded-2xl shadow-lg cursor-pointer transition transform hover:-translate-y-1">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">DANCE STUDIO</span>
+                                <i class="fa-solid fa-music text-pink-400"></i>
+                            </div>
+                            <h4 class="font-bold text-sm text-slate-100 mb-1">Trial Dance Pass</h4>
+                            <p class="text-xs text-slate-400">Choose Bachata, HipHop or Ballet session</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: First IF / ELSE Decision (Attendance) -->
+                <div class="relative z-10 flex flex-col items-center w-full max-w-3xl">
+                    <div id="node-if-attend" onclick="selectNode('if-attend')" class="workflow-node bg-purple-950/40 border-2 border-purple-500/80 p-4 rounded-2xl w-96 shadow-xl text-center cursor-pointer hover:border-purple-400 transition">
+                        <span class="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-500/30 text-purple-300 border border-purple-400/40 mb-1">IF / ELSE DECISION POINT</span>
+                        <h4 class="font-bold text-base text-purple-200">Did Lead Attend Trial Session?</h4>
+                        <p class="text-xs text-slate-400 mt-1">Checked automatically via QR Check-in or Trainer App</p>
+                        <div class="flex justify-center gap-6 mt-3 text-xs font-semibold">
+                            <span class="text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-check-circle"></i> YES (Branch A)</span>
+                            <span class="text-rose-400 flex items-center gap-1"><i class="fa-solid fa-times-circle"></i> NO (Branch B)</span>
+                        </div>
+                    </div>
+
+                    <!-- Dual Output Branches for Attendance -->
+                    <div class="grid grid-cols-2 gap-12 w-full mt-8">
+                        <!-- YES Path: Immediate Follow-Up Offer -->
+                        <div id="node-att-yes" onclick="selectNode('att-yes')" class="workflow-node bg-slate-900 border border-emerald-500/50 p-4 rounded-2xl shadow-lg cursor-pointer hover:border-emerald-400 transition">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">PATH YES</span>
+                                <i class="fa-solid fa-paper-plane text-emerald-400"></i>
+                            </div>
+                            <h5 class="font-bold text-sm text-slate-100">Send Instant Membership Offer</h5>
+                            <p class="text-xs text-slate-400">WhatsApp message with <span id="lbl-discount-val">20% Off</span> membership link</p>
+                        </div>
+
+                        <!-- NO Path: Automated Re-engagement Flow -->
+                        <div id="node-att-no" onclick="selectNode('att-no')" class="workflow-node bg-slate-900 border border-rose-500/50 p-4 rounded-2xl shadow-lg cursor-pointer hover:border-rose-400 transition">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">PATH NO (NO-SHOW)</span>
+                                <i class="fa-solid fa-arrow-rotate-left text-rose-400"></i>
+                            </div>
+                            <h5 class="font-bold text-sm text-slate-100">Automated No-Show Recovery</h5>
+                            <p class="text-xs text-slate-400">Send "We missed you!" SMS + Easy 1-click Reschedule link</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 4: Second IF / ELSE Decision (Membership Purchase) -->
+                <div class="relative z-10 flex flex-col items-center w-full max-w-3xl">
+                    <div id="node-if-buy" onclick="selectNode('if-buy')" class="workflow-node bg-indigo-950/40 border-2 border-indigo-500/80 p-4 rounded-2xl w-96 shadow-xl text-center cursor-pointer hover:border-indigo-400 transition">
+                        <span class="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 mb-1">DECISION POINT 2</span>
+                        <h4 class="font-bold text-base text-indigo-200">Purchased Paid Package?</h4>
+                        <p class="text-xs text-slate-400 mt-1">Stripe / POS Payment Sync Trigger</p>
+                    </div>
+
+                    <!-- Dual Output Branches for Conversion -->
+                    <div class="grid grid-cols-2 gap-12 w-full mt-8">
+                        <!-- WON / MEMBER -->
+                        <div id="node-member-won" onclick="selectNode('won')" class="workflow-node bg-slate-900 border-2 border-emerald-500 p-4 rounded-2xl shadow-xl cursor-pointer hover:border-emerald-400 transition">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-500/40">RESULT: WON MEMBER</span>
+                                <i class="fa-solid fa-trophy text-amber-400"></i>
+                            </div>
+                            <h5 class="font-bold text-sm text-emerald-300">Welcome Onboarding Flow</h5>
+                            <p class="text-xs text-slate-400">Send Mobile App Access, Trainer Assignment & Orientation Video</p>
+                        </div>
+
+                        <!-- NURTURE / AGING -->
+                        <div id="node-member-nurture" onclick="selectNode('nurture')" class="workflow-node bg-slate-900 border border-slate-700 p-4 rounded-2xl shadow-md cursor-pointer hover:border-slate-500 transition">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">RESULT: LONG-TERM NURTURE</span>
+                                <i class="fa-solid fa-envelope-open-text text-indigo-400"></i>
+                            </div>
+                            <h5 class="font-bold text-sm text-slate-200">14-Day Value Email Drip</h5>
+                            <p class="text-xs text-slate-400">Nutrition guides, class highlights & testimonials</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer Indicator inside canvas -->
+            <div class="mt-8 pt-4 border-t border-slate-800/60 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-4">
+                <div class="flex items-center gap-4">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-1 bg-emerald-500 rounded"></span> Active Simulated Route</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-1 bg-slate-600 rounded"></span> Inactive Path</span>
+                </div>
+                <p>Click any workflow node above to inspect detail triggers, templates & automated payload.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL 1: Node Inspection Drawer/Modal -->
+    <div id="nodeModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Modal Header -->
+            <div class="p-4 bg-slate-800/80 border-b border-slate-700 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div id="modal-icon-bg" class="w-9 h-9 rounded-xl bg-indigo-600/30 border border-indigo-500 flex items-center justify-center text-indigo-300 text-base">
+                        <i id="modal-icon" class="fa-solid fa-circle-info"></i>
+                    </div>
+                    <div>
+                        <h3 id="modal-title" class="font-bold text-slate-100 text-base">Node Details</h3>
+                        <p id="modal-subtitle" class="text-xs text-slate-400">Workflow Node Properties</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('nodeModal')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content Body -->
+            <div class="p-5 space-y-4 overflow-y-auto text-sm">
+                <div>
+                    <h5 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Description & Purpose</h5>
+                    <p id="modal-description" class="text-slate-300 leading-relaxed text-xs sm:text-sm">Node explanation goes here...</p>
+                </div>
+
+                <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                    <h5 class="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-bolt"></i> Triggered Automated Actions
+                    </h5>
+                    <ul id="modal-actions" class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                        <!-- Dynamic actions inserted via JS -->
+                    </ul>
+                </div>
+
+                <!-- Message Preview Box -->
+                <div>
+                    <h5 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span>Customer Experience Preview</span>
+                        <span class="text-[10px] text-emerald-400 font-mono"><i class="fa-brands fa-whatsapp"></i> Live WhatsApp/SMS Preview</span>
+                    </h5>
+                    <div class="bg-slate-950 rounded-xl p-3 border border-slate-800 flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-full bg-emerald-600/20 text-emerald-400 flex items-center justify-center shrink-0 mt-1">
+                            <i class="fa-solid fa-comment-dots text-sm"></i>
+                        </div>
+                        <div class="bg-slate-800/90 text-xs text-slate-200 p-3 rounded-2xl rounded-tl-none border border-slate-700 max-w-sm font-sans leading-snug" id="modal-preview-msg">
+                            Sample message text...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 bg-slate-800/50 border-t border-slate-800 flex justify-end">
+                <button onclick="closeModal('nodeModal')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium text-xs transition">
+                    Close Inspector
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Website Embed & Hosting Instructions -->
+    <div id="embedModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+            <!-- Header -->
+            <div class="p-4 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-600/30 border border-indigo-500 flex items-center justify-center text-indigo-300">
+                        <i class="fa-solid fa-code"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-100 text-base">Embed Workflow on Your Website</h3>
+                        <p class="text-xs text-slate-400">Choose your platform for easy step-by-step installation</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('embedModal')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Embed Content -->
+            <div class="p-6 overflow-y-auto space-y-6">
+                <!-- Platform Tabs -->
+                <div class="flex border-b border-slate-800 gap-2">
+                    <button onclick="switchEmbedTab('iframe')" id="tab-btn-iframe" class="tab-embed-btn px-4 py-2 border-b-2 border-indigo-500 text-indigo-400 font-semibold text-xs transition">Responsive iFrame</button>
+                    <button onclick="switchEmbedTab('wordpress')" id="tab-btn-wordpress" class="tab-embed-btn px-4 py-2 border-b-2 border-transparent text-slate-400 font-semibold text-xs hover:text-slate-200 transition">WordPress</button>
+                    <button onclick="switchEmbedTab('webflow')" id="tab-btn-webflow" class="tab-embed-btn px-4 py-2 border-b-2 border-transparent text-slate-400 font-semibold text-xs hover:text-slate-200 transition">Webflow / Elementor</button>
+                    <button onclick="switchEmbedTab('custom')" id="tab-btn-custom" class="tab-embed-btn px-4 py-2 border-b-2 border-transparent text-slate-400 font-semibold text-xs hover:text-slate-200 transition">Direct Single File HTML</button>
+                </div>
+
+                <!-- Code Container Preview -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold text-slate-300">Ready-To-Copy Snippet</span>
+                        <button onclick="copyEmbedCode()" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded-lg font-medium transition flex items-center gap-1.5">
+                            <i class="fa-regular fa-copy"></i> <span id="btn-copy-text">Copy Code</span>
+                        </button>
+                    </div>
+                    <pre class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs font-mono text-indigo-300 overflow-x-auto whitespace-pre-wrap" id="embed-code-block"></pre>
+                </div>
+
+                <!-- Integration Steps Guide -->
+                <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/60 space-y-2">
+                    <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-indigo-400"></i> Step-By-Step Hosting & Upload Instructions
+                    </h4>
+                    <ol class="text-xs text-slate-300 space-y-2 list-decimal list-inside pl-1 leading-relaxed" id="embed-instructions-list">
+                        <!-- Dynamic instructions based on selected platform -->
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 bg-slate-800/50 border-t border-slate-800 flex justify-end">
+                <button onclick="closeModal('embedModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium text-xs transition">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* State Variables */
+        let activeCategory = 'all'; // 'all', 'gym', 'swim', 'dance'
+        let decisionState = {
+            attended: true,
+            bought: true
+        };
+        let workflowConfig = {
+            whatsapp: true,
+            reminder: true,
+            noshow: true,
+            discount: '20'
+        };
+
+        // Node definitions for drawer detailed info
+        const nodeData = {
+            'capture': {
+                title: "Multi-Channel Lead Inflow",
+                subtitle: "Automated Lead Capture",
+                icon: "fa-bullhorn",
+                desc: "Captures prospect inquiries from Meta Ads, Website contact forms, Google Business Profiles, or Studio QR code flyers into a single consolidated CRM inbox.",
+                actions: [
+                    "Creates unified CRM Contact Card with tags",
+                    "Sends instant auto-reply confirmation SMS & WhatsApp",
+                    "Assigns lead to on-duty sales rep / studio manager",
+                    "Fires Facebook Pixel Lead event & Google Analytics tag"
+                ],
+                previewMsg: "Hi [Lead Name]! Thank you for inquiring about our Studio pass. Tap here to select your trial class slot: https://gymcrm.app/book"
+            },
+            'gym': {
+                title: "Gym & Fitness Trial Pass",
+                subtitle: "1-Day Free Access",
+                icon: "fa-dumbbell",
+                desc: "Triggers personalized orientation pass including access to weight room, cardio section, and 1-on-1 fitness assessment with a certified coach.",
+                actions: [
+                    "Generates digital QR Check-in Pass",
+                    "Notifies head gym coach of newcomer arrival",
+                    "Schedules automated 24-hour pre-trial reminder"
+                ],
+                previewMsg: "Your Gym Trial Pass is confirmed for tomorrow! Show this QR code at front desk. Remember to bring a water bottle!"
+            },
+            'swim': {
+                title: "Swimming Academy Assessment",
+                subtitle: "Pool Session & Level Check",
+                icon: "fa-person-swimming",
+                desc: "Routes swim candidates to pool scheduling. Instructors verify skill level (Beginner/Intermediate/Advanced) and lane availability.",
+                actions: [
+                    "Sends pool safety rules & swimwear dress code PDF",
+                    "Reserves slot with Swim Instructor",
+                    "Triggers automated locker assignment"
+                ],
+                previewMsg: "Welcome to Swim Academy! Your assessment slot is locked in. Please arrive 10 mins early with swim cap and goggles."
+            },
+            'dance': {
+                title: "Dance Studio Class Trial",
+                subtitle: "Style Selection & Trial Pass",
+                icon: "fa-music",
+                desc: "Captures preferred dance style (Bachata, Salsa, HipHop, Ballet, Contemporary) and books slot in upcoming group class.",
+                actions: [
+                    "Sends playlist & recommended footwear guide",
+                    "Syncs class roster in Dance Management software",
+                    "Notifies dance instructor of guest attendance"
+                ],
+                previewMsg: "Get ready to dance! Your Salsa Trial Pass is confirmed. Wear comfortable clothing and get ready to have fun!"
+            },
+            'if-attend': {
+                title: "IF/ELSE: Trial Attendance Check",
+                subtitle: "Automated Check-in Logic",
+                icon: "fa-code-branch",
+                desc: "Evaluates whether the lead scanned their QR pass or was marked 'Attended' by the studio coach at class time.",
+                actions: [
+                    "IF YES: Immediately advances lead to Post-Trial Discount Offer stage",
+                    "IF NO: Triggers automatic no-show recovery sequence within 1 hour"
+                ],
+                previewMsg: "System Decision Branching: Checking front-desk check-in logs..."
+            },
+            'att-yes': {
+                title: "Instant Membership Offer (Attended)",
+                subtitle: "Post-Trial Conversion Offer",
+                icon: "fa-paper-plane",
+                desc: "Sends automated high-value membership offer while prospect enthusiasm is highest immediately following their trial class.",
+                actions: [
+                    "Sends customized discount link via WhatsApp",
+                    "Triggers 48-hour expiring countdown deal",
+                    "Alerts sales rep to place follow-up call"
+                ],
+                previewMsg: "Hope you loved your trial! Sign up within 24 hours to get 20% OFF your first 3 months. Claim here: https://gymcrm.app/claim-discount"
+            },
+            'att-no': {
+                title: "No-Show Re-Engagement Flow",
+                subtitle: "Automated Re-Booking Sequence",
+                icon: "fa-arrow-rotate-left",
+                desc: "Recognizes absence and automatically nudges lead to reschedule without requiring manual staff outreach.",
+                actions: [
+                    "Sends polite 'We missed you' WhatsApp nudge",
+                    "Provides instant 1-click rescheduling calendar",
+                    "Extends pass validity by 7 days"
+                ],
+                previewMsg: "We missed you at the studio today! Life gets busy - tap here to pick another trial time that works for you: https://gymcrm.app/reschedule"
+            },
+            'if-buy': {
+                title: "IF/ELSE: Membership Purchase Decision",
+                subtitle: "Payment Gateway Sync",
+                icon: "fa-credit-card",
+                desc: "Integrates with Stripe / POS / Direct Debit to detect purchase events within 7 days of trial.",
+                actions: [
+                    "IF YES: Moves contact to 'Active Member' pipeline & triggers onboarding",
+                    "IF NO: Moves contact to 'Long-term Lead Nurture' campaign"
+                ],
+                previewMsg: "System Rule: Polling Stripe POS for matching client transaction..."
+            },
+            'won': {
+                title: "Member Onboarding Workflow",
+                subtitle: "New Member Retention Flow",
+                icon: "fa-trophy",
+                desc: "Welcomes brand new paid members, delivers app credentials, schedules baseline body scan or goal-setting chat.",
+                actions: [
+                    "Generates Mobile App login credentials",
+                    "Sends digital welcome packet & studio guidelines",
+                    "Schedules 30-day member check-in alert for retention team"
+                ],
+                previewMsg: "Welcome to the Family! 🎉 Your membership is now active. Download our app to book classes and track progress!"
+            },
+            'nurture': {
+                title: "14-Day Value Email Drip",
+                subtitle: "Lead Retention & Re-heating",
+                icon: "fa-envelope-open-text",
+                desc: "Keeps non-buying leads warm through helpful fitness tips, instructor stories, and member transformation reviews.",
+                actions: [
+                    "Enrolls in bi-weekly automated newsletter",
+                    "Sends transformation story emails on Day 3, 7, 14",
+                    "Triggers special end-of-month promo offer"
+                ],
+                previewMsg: "Email Drip Active: [Day 3] 'How Sarah lost 15lbs with our swim workouts' + limited-time rejoin pass."
+            }
+        };
+
+        // Render or update SVG Connection paths between nodes
+        function drawCanvasConnections() {
+            const svg = document.getElementById('svg-canvas');
+            if(!svg) return;
+            svg.innerHTML = ''; // Reset paths
+
+            // Simple helper to connect elements
+            function connectElements(id1, id2, pathType = 'normal') {
+                const el1 = document.getElementById(id1);
+                const el2 = document.getElementById(id2);
+                if (!el1 || !el2) return;
+
+                const rect1 = el1.getBoundingClientRect();
+                const rect2 = el2.getBoundingClientRect();
+                const svgRect = svg.getBoundingClientRect();
+
+                // Calculate center points relative to SVG
+                const x1 = rect1.left + rect1.width / 2 - svgRect.left;
+                const y1 = rect1.bottom - svgRect.top;
+                const x2 = rect2.left + rect2.width / 2 - svgRect.left;
+                const y2 = rect2.top - svgRect.top;
+
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                const deltaY = y2 - y1;
+                
+                // Curved Bezier path calculation
+                const d = `M ${x1} ${y1} C ${x1} ${y1 + deltaY * 0.5}, ${x2} ${y2 - deltaY * 0.5}, ${x2} ${y2}`;
+                
+                path.setAttribute("d", d);
+                path.setAttribute("fill", "none");
+
+                // Determine active vs inactive line styling based on state
+                let pathClass = "path-line path-inactive";
+
+                if (pathType === 'active') {
+                    pathClass = "path-line path-active";
+                } else if (pathType === 'rejected') {
+                    pathClass = "path-line path-rejected";
+                }
+
+                path.setAttribute("class", pathClass);
+                svg.appendChild(path);
+            }
+
+            // Connection 1: Lead Capture -> Branches
+            const isGymActive = activeCategory === 'all' || activeCategory === 'gym';
+            const isSwimActive = activeCategory === 'all' || activeCategory === 'swim';
+            const isDanceActive = activeCategory === 'all' || activeCategory === 'dance';
+
+            if (isGymActive) connectElements('node-capture', 'node-branch-gym', 'active');
+            if (isSwimActive) connectElements('node-capture', 'node-branch-swim', 'active');
+            if (isDanceActive) connectElements('node-capture', 'node-branch-dance', 'active');
+
+            // Connection 2: Branches -> Decision 1
+            if (isGymActive) connectElements('node-branch-gym', 'node-if-attend', 'active');
+            if (isSwimActive) connectElements('node-branch-swim', 'node-if-attend', 'active');
+            if (isDanceActive) connectElements('node-branch-dance', 'node-if-attend', 'active');
+
+            // Connection 3: Decision 1 -> Attended YES/NO
+            if (decisionState.attended) {
+                connectElements('node-if-attend', 'node-att-yes', 'active');
+                connectElements('node-if-attend', 'node-att-no', 'rejected');
+            } else {
+                connectElements('node-if-attend', 'node-att-yes', 'rejected');
+                connectElements('node-if-attend', 'node-att-no', 'active');
+            }
+
+            // Connection 4: Attended Branches -> Decision 2
+            connectElements('node-att-yes', 'node-if-buy', decisionState.attended ? 'active' : 'inactive');
+            connectElements('node-att-no', 'node-if-buy', !decisionState.attended ? 'active' : 'inactive');
+
+            // Connection 5: Decision 2 -> Won / Nurture
+            if (decisionState.bought) {
+                connectElements('node-if-buy', 'node-member-won', 'active');
+                connectElements('node-if-buy', 'node-member-nurture', 'rejected');
+            } else {
+                connectElements('node-if-buy', 'node-member-won', 'rejected');
+                connectElements('node-if-buy', 'node-member-nurture', 'active');
+            }
+        }
+
+        // Set Branch Category Filter
+        function setCategoryFilter(cat) {
+            activeCategory = cat;
+            
+            // Highlight buttons
+            document.querySelectorAll('.cat-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-600', 'text-white');
+                btn.classList.add('text-slate-400');
+            });
+            const activeBtn = document.getElementById(`filter-${cat}`);
+            if(activeBtn) {
+                activeBtn.classList.add('bg-indigo-600', 'text-white');
+                activeBtn.classList.remove('text-slate-400');
+            }
+
+            // Highlight corresponding branch cards
+            const gymCard = document.getElementById('node-branch-gym');
+            const swimCard = document.getElementById('node-branch-swim');
+            const danceCard = document.getElementById('node-branch-dance');
+
+            gymCard.style.opacity = (cat === 'all' || cat === 'gym') ? '1' : '0.25';
+            swimCard.style.opacity = (cat === 'all' || cat === 'swim') ? '1' : '0.25';
+            danceCard.style.opacity = (cat === 'all' || cat === 'dance') ? '1' : '0.25';
+
+            addLog(`Filter changed to focus: [${cat.toUpperCase()}] pipeline.`);
+            drawCanvasConnections();
+        }
+
+        // Toggle Interactive Decisions (Attended / Bought)
+        function setDecision(type, val) {
+            decisionState[type] = val;
+
+            if(type === 'attended') {
+                document.getElementById('btn-att-yes').className = val ? "px-2 py-1 rounded text-xs font-semibold bg-emerald-600 text-white transition" : "px-2 py-1 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition";
+                document.getElementById('btn-att-no').className = !val ? "px-2 py-1 rounded text-xs font-semibold bg-rose-600 text-white transition" : "px-2 py-1 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition";
+                addLog(`Rule Update: Lead Trial Attendance set to [${val ? 'YES (Attended)' : 'NO (No-Show)'}]`);
+            } else if (type === 'bought') {
+                document.getElementById('btn-buy-yes').className = val ? "px-2 py-1 rounded text-xs font-semibold bg-emerald-600 text-white transition" : "px-2 py-1 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition";
+                document.getElementById('btn-buy-no').className = !val ? "px-2 py-1 rounded text-xs font-semibold bg-rose-600 text-white transition" : "px-2 py-1 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition";
+                addLog(`Rule Update: Membership Purchase outcome set to [${val ? 'YES (Converted)' : 'NO (Nurture)'}]`);
+            }
+
+            drawCanvasConnections();
+        }
+
+        // Update Config Options from sidebar inputs
+        function updateWorkflowConfig() {
+            workflowConfig.whatsapp = document.getElementById('cfg-whatsapp').checked;
+            workflowConfig.reminder = document.getElementById('cfg-reminder').checked;
+            workflowConfig.noshow = document.getElementById('cfg-noshow').checked;
+            workflowConfig.discount = document.getElementById('cfg-discount').value;
+
+            // Update UI label
+            const discLbl = document.getElementById('lbl-discount-val');
+            if(discLbl) {
+                discLbl.innerText = workflowConfig.discount === 'waive' ? 'Waived Fee' : `${workflowConfig.discount}% Off`;
+            }
+
+            addLog(`Settings updated: Auto WhatsApp: ${workflowConfig.whatsapp}, Discount: ${workflowConfig.discount}`);
+        }
+
+        // Log Helper
+        function addLog(msg) {
+            const logBox = document.getElementById('crm-log');
+            if (!logBox) return;
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const item = document.createElement('div');
+            item.className = "text-slate-300 border-l-2 border-indigo-500 pl-2 py-0.5 animate-fade-in";
+            item.innerHTML = `<span class="text-slate-500 text-[10px]">[${time}]</span> ${msg}`;
+            logBox.appendChild(item);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('crm-log').innerHTML = `<div class="text-slate-500 italic">[Log cleared] Waiting for triggers...</div>`;
+        }
+
+        // Run Interactive Simulation
+        function runSimulation() {
+            addLog(`<span class="text-emerald-400 font-bold">🚀 Starting Test Lead Simulation...</span>`);
+            
+            const nodesToAnimate = [
+                'node-capture',
+                activeCategory === 'gym' ? 'node-branch-gym' : (activeCategory === 'swim' ? 'node-branch-swim' : 'node-branch-dance'),
+                'node-if-attend',
+                decisionState.attended ? 'node-att-yes' : 'node-att-no',
+                'node-if-buy',
+                decisionState.bought ? 'node-member-won' : 'node-member-nurture'
+            ];
+
+            let delay = 0;
+            nodesToAnimate.forEach((nodeId, idx) => {
+                setTimeout(() => {
+                    const node = document.getElementById(nodeId);
+                    if (node) {
+                        node.classList.add('node-pulse', 'ring-2', 'ring-indigo-400');
+                        setTimeout(() => {
+                            node.classList.remove('node-pulse', 'ring-2', 'ring-indigo-400');
+                        }, 1200);
+                    }
+
+                    if (idx === 0) addLog(`Step 1: Lead captured from Facebook Ad campaign.`);
+                    if (idx === 1) addLog(`Step 2: Routed to category branch: [${activeCategory.toUpperCase()}]`);
+                    if (idx === 2) addLog(`Step 3: Checking Check-in status at decision node...`);
+                    if (idx === 3) addLog(`Step 4: Decision evaluation -> ${decisionState.attended ? 'Attended trial! Triggering offer WhatsApp.' : 'No-show detected! Dispatching re-booking SMS.'}`);
+                    if (idx === 4) addLog(`Step 5: Verifying payment POS status...`);
+                    if (idx === 5) addLog(`Step 6: Outcome reached -> <span class="text-emerald-400 font-bold">${decisionState.bought ? 'Paid Member Converted 🎉' : 'Enrolled into 14-Day Nurture Drip'}</span>`);
+
+                }, delay);
+                delay += 800;
+            });
+        }
+
+        // Reset All State
+        function resetWorkflowState() {
+            activeCategory = 'all';
+            decisionState = { attended: true, bought: true };
+            setCategoryFilter('all');
+            setDecision('attended', true);
+            setDecision('bought', true);
+            clearLog();
+            addLog(`Workflow logic state reset to default.`);
+        }
+
+        // Node Inspection Modal Opener
+        function selectNode(key) {
+            const data = nodeData[key];
+            if (!data) return;
+
+            document.getElementById('modal-title').innerText = data.title;
+            document.getElementById('modal-subtitle').innerText = data.subtitle;
+            document.getElementById('modal-description').innerText = data.desc;
+            document.getElementById('modal-icon').className = `fa-solid ${data.icon}`;
+            document.getElementById('modal-preview-msg').innerText = data.previewMsg;
+
+            const actionsList = document.getElementById('modal-actions');
+            actionsList.innerHTML = '';
+            data.actions.forEach(act => {
+                const li = document.createElement('li');
+                li.innerText = act;
+                actionsList.appendChild(li);
+            });
+
+            document.getElementById('nodeModal').classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        // Embed Modal logic
+        let activeEmbedTab = 'iframe';
+
+        function openEmbedModal() {
+            switchEmbedTab('iframe');
+            document.getElementById('embedModal').classList.remove('hidden');
+        }
+
+        function switchEmbedTab(tab) {
+            activeEmbedTab = tab;
+            
+            // Highlight Tab Buttons
+            document.querySelectorAll('.tab-embed-btn').forEach(btn => {
+                btn.classList.remove('border-indigo-500', 'text-indigo-400');
+                btn.classList.add('border-transparent', 'text-slate-400');
+            });
+            const selectedBtn = document.getElementById(`tab-btn-${tab}`);
+            if (selectedBtn) {
+                selectedBtn.classList.add('border-indigo-500', 'text-indigo-400');
+                selectedBtn.classList.remove('border-transparent', 'text-slate-400');
+            }
+
+            const codeBlock = document.getElementById('embed-code-block');
+            const instList = document.getElementById('embed-instructions-list');
+
+            const currentUrl = window.location.href;
+
+            if (tab === 'iframe') {
+                codeBlock.innerText = `<!-- Fitness CRM Interactive Workflow iFrame Embed -->
+<div style="width:100%; height:750px; border-radius:16px; overflow:hidden; border:1px solid #334155;">
+  <iframe 
+    src="${currentUrl}" 
+    width="100%" 
+    height="100%" 
+    frameborder="0" 
+    allow="clipboard-write"
+    style="border:0;"
+    title="Fitness CRM Workflow Simulator">
+  </iframe>
+</div>`;
+
+                instList.innerHTML = `
+                    <li>Host this single <code>.html</code> file on your domain, CDN, or web host (e.g., Vercel, Netlify, or AWS S3).</li>
+                    <li>Copy the <code>&lt;iframe&gt;</code> code snippet above.</li>
+                    <li>Paste it into any HTML section on your landing page to give visitors an interactive workflow experience.</li>
+                `;
+            } else if (tab === 'wordpress') {
+                codeBlock.innerText = `[html]
+<iframe src="${currentUrl}" width="100%" height="750px" style="border:none; border-radius:12px;"></iframe>
+[/html]`;
+
+                instList.innerHTML = `
+                    <li>Log in to your WordPress Admin Dashboard.</li>
+                    <li>Edit your target Page or Post using Gutenberg or Elementor.</li>
+                    <li>Add a <strong>Custom HTML Block</strong> (or Shortcode block).</li>
+                    <li>Paste the code snippet above and click <strong>Update / Publish</strong>.</li>
+                `;
+            } else if (tab === 'webflow') {
+                codeBlock.innerText = `<div class="crm-workflow-wrapper" style="width:100%; height:800px; border-radius:16px; border:1px solid #1e293b; overflow:hidden;">
+  <iframe src="${currentUrl}" width="100%" height="100%" style="border:none;"></iframe>
+</div>`;
+
+                instList.innerHTML = `
+                    <li>Open your Webflow Designer project.</li>
+                    <li>Add an <strong>Embed Element</strong> from the Add Panel (A) -> Components.</li>
+                    <li>Paste the snippet into the Embed Code editor and click <strong>Save & Close</strong>.</li>
+                    <li>Publish your Webflow site to view the live responsive workflow.</li>
+                `;
+            } else if (tab === 'custom') {
+                codeBlock.innerText = `<!-- Single-File Custom Web Application Code -->
+<!-- You can download or copy the entire source code of this page directly. -->
+<!DOCTYPE html>
+<html lang="en">
+  <!-- All Tailwind CSS, FontAwesome icons & JavaScript logic are included in this single file. -->
+</html>`;
+
+                instList.innerHTML = `
+                    <li>Copy the source code of this file directly into an <code>index.html</code> file.</li>
+                    <li>Upload the file to your web server or embed it using inline <code>&lt;script&gt;</code> tags.</li>
+                    <li>No external backend dependencies or database required - runs 100% in browser!</li>
+                `;
+            }
+        }
+
+        // Copy to clipboard helper
+        function copyEmbedCode() {
+            const codeText = document.getElementById('embed-code-block').innerText;
+            
+            // Clipboard fallback as per developer guidelines
+            const tempInput = document.createElement('textarea');
+            tempInput.value = codeText;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            const btnText = document.getElementById('btn-copy-text');
+            btnText.innerText = "Copied!";
+            setTimeout(() => {
+                btnText.innerText = "Copy Code";
+            }, 2000);
+        }
+
+        // Window resize event to redraw SVG connection lines cleanly
+        window.addEventListener('resize', () => {
+            drawCanvasConnections();
+        });
+
+        // Initialize SVG lines on window load
+        window.onload = function() {
+            setTimeout(() => {
+                drawCanvasConnections();
+                addLog("Studio Workflow initialized successfully.");
+            }, 300);
+        };
+    </script>
+</body>
+</html>

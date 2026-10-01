@@ -1,0 +1,25 @@
+const express = require('express');
+const rateLimit = require('express-rate-limit');
+const { requireAuth } = require('../middleware/authMiddleware');
+const enquiry = require('../controllers/enquiryController');
+const product = require('../controllers/productController');
+const blog = require('../controllers/blogController');
+const upload = require('../middleware/uploadMiddleware');
+const router = express.Router();
+const enquiryLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false });
+
+router.post('/enquiries', enquiryLimiter, enquiry.create);
+router.get('/products', product.publicList);
+router.get('/blogs', blog.publicList);
+router.get('/blogs/:slug', blog.getBySlug);
+router.get('/admin/enquiries', requireAuth, enquiry.list);
+router.delete('/admin/enquiries/:id', requireAuth, enquiry.remove);
+router.get('/admin/products', requireAuth, product.list);
+router.post('/admin/products', requireAuth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'video', maxCount: 1 }]), product.create);
+router.put('/admin/products/:id', requireAuth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'video', maxCount: 1 }]), product.update);
+router.delete('/admin/products/:id', requireAuth, product.remove);
+router.get('/admin/blogs', requireAuth, blog.list);
+router.post('/admin/blogs', requireAuth, upload.single('featuredImage'), blog.create);
+router.put('/admin/blogs/:id', requireAuth, upload.single('featuredImage'), blog.update);
+router.delete('/admin/blogs/:id', requireAuth, blog.remove);
+module.exports = router;
