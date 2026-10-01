@@ -2,7 +2,7 @@ const Enquiry = require('../models/Enquiry');
 
 async function create(req, res) {
   const { name, email, phone, subject, message } = req.body;
-  if (!name || !email || !subject || !message) return res.status(400).json({ success: false, message: 'Name, email, subject and message are required.' });
+  if (!name || !phone || !subject || !message) return res.status(400).json({ success: false, message: 'Name, email, subject and message are required.' });
   const enquiry = await Enquiry.create({ name, email, phone, subject, message });
   res.status(201).json({ success: true, enquiry });
 }
